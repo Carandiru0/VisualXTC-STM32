@@ -1,0 +1,43 @@
+LR_SRAM 0x60000000 NOCOMPRESS 0x00080000 {			; External SRAM section, loadregion&execution region are the same
+	ER_SRAM 0x60000000 NOCOMPRESS UNINIT FIXED ALIGN 8 0x00080000 {		; Equal to Bank1 starting address, 524,288 bytes in size
+	   *(.ext_sram*)													; Heap requires 8byte alignment
+	   ;*(HEAP +Last)
+	  }
+}
+
+LR_IROM1 0x00200000 0x00200000  {    ; load region size_region
+  ER_IROM1 0x00200000 0x00200000  {  ; load address = execution address
+   *.o (RESET, +First)
+   *(InRoot$$Sections)
+   .ANY (+RO)
+   .ANY (+XO)
+  }
+  RO_IRAM1 0x00000000 NOCOMPRESS ALIGN 4 0x00004000  { ; ITCM 16KB Code ONLY
+	*.o (.ramfunc)
+  }
+  RW_IRAM1 0x20000000 NOCOMPRESS 0x00001020  {	; DTCM Stack Size is 4KB in application
+	*(STACK)								; However we allocate 32 more bytes for safe padding
+  }
+  ; 32 bytes Padding between stack and rest of used DTCM
+  RW_IRAM2 0x20001020 NOCOMPRESS 0x0001EFE0  {	; DTCM Remainder (DTCM Total 128KB)
+	*(.dtcm_const*)											 ; Defined here in the order that the memory map will reflect
+	*(.dtcm_atomic*)						 
+	*(.dtcm*)
+  }
+  RW_IRAM3 0x20020000 NOCOMPRESS 0x0004C000  {	; (SRAM1 368KB) last 64KB removed and reserved for .dma2dscratchbuffer in section RW_IRAM4
+	*(.framebuffer0 +First)
+	*(.data)
+	*(.bss*)
+	.ANY (+RW)
+	.ANY (+ZI)
+	*(HEAP +Last) 
+  }
+  RW_IRAM4 0x2006C000 NOCOMPRESS 0x00010000  {	; (SRAM1 368KB) Last 64KB reserved for .dma2dscratchbuffer
+	*(.dma2dscratchbuffer +First)
+  }
+  RW_IRAM5 0x2007C000 NOCOMPRESS 0x00004000  {	; (SRAM2 16KB)
+	*(.framebuffer1 +First)
+	*(.sram2)
+  }
+}
+
